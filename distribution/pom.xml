@@ -358,6 +358,11 @@
           <artifactId>drill-format-excel</artifactId>
           <version>${project.version}</version>
         </dependency>
+        <dependency>
+          <groupId>org.apache.drill.contrib</groupId>
+          <artifactId>drill-storage-solr</artifactId>
+          <version>${project.version}</version>
+        </dependency>
       </dependencies>
     </profile>
 
