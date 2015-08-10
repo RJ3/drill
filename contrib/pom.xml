@@ -63,4 +63,5 @@
       </properties>
     </profile>
   </profiles>
+		<module>storage-solr</module>
 </project>
