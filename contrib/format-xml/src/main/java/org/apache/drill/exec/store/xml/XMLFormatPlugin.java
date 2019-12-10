@@ -30,6 +30,8 @@ import org.apache.drill.exec.store.dfs.easy.EasyFormatPlugin;
 import org.apache.drill.exec.store.dfs.easy.EasyWriter;
 import org.apache.drill.exec.store.dfs.easy.FileWork;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -42,7 +44,7 @@ public class XMLFormatPlugin extends EasyFormatPlugin<XMLFormatConfig> {
 
   private XMLFormatConfig config;
 
-  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(XMLFormatPlugin.class);
+  private static final Logger logger = LoggerFactory.getLogger(XMLFormatPlugin.class);
 
   public XMLFormatPlugin(String name, DrillbitContext context, Configuration fsConf, StoragePluginConfig storageConfig) {
     this(name, context, fsConf, storageConfig, new XMLFormatConfig());
