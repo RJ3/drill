@@ -19,43 +19,50 @@ package org.apache.drill.exec.store.xml;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.collect.ImmutableList;
 import org.apache.drill.common.logical.FormatPluginConfig;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
-@JsonTypeName("xml")
+@JsonTypeName(XMLFormatPlugin.DEFAULT_NAME)
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class XMLFormatConfig implements FormatPluginConfig {
-  public List<String> extensions;
+
+  public List<String> extensions = Collections.singletonList("xml");
 
   public boolean flatten = false;
 
-  public boolean flatten_attributes = true;
+  public boolean flattenAttributes = true;
 
-  private static final List<String> DEFAULT_EXTS = ImmutableList.of("xml");
+  public XMLBatchReader.XMLReaderConfig getReaderConfig(XMLFormatPlugin plugin) {
+    XMLBatchReader.XMLReaderConfig readerConfig = new XMLBatchReader.XMLReaderConfig(plugin);
+    return readerConfig;
+  }
 
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public List<String> getExtensions() {
-    if (extensions == null) {
-      return DEFAULT_EXTS;
-    }
     return extensions;
   }
 
   @Override
   public int hashCode() {
-    return 99;
+    return Arrays.hashCode(
+      new Object[]{extensions, flatten, flattenAttributes});
   }
 
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;
-    } else if (obj == null) {
-      return false;
-    } else if (getClass() == obj.getClass()) {
-      return true;
     }
-    return false;
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    XMLFormatConfig other = (XMLFormatConfig) obj;
+    return Objects.equals(extensions, other.extensions)
+      && Objects.equals(flatten, other.flatten)
+      && Objects.equals(flattenAttributes, other.flattenAttributes);
   }
 }

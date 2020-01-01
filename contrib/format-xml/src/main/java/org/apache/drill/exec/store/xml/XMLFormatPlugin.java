@@ -18,75 +18,76 @@
 package org.apache.drill.exec.store.xml;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.StoragePluginConfig;
-import org.apache.drill.exec.ops.FragmentContext;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
+import org.apache.drill.exec.physical.impl.scan.file.FileScanFramework;
+import org.apache.drill.exec.physical.impl.scan.file.FileScanFramework.FileScanBuilder;
+import org.apache.drill.exec.physical.impl.scan.framework.ManagedReader;
 import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.server.DrillbitContext;
-import org.apache.drill.exec.store.RecordReader;
-import org.apache.drill.exec.store.RecordWriter;
-import org.apache.drill.exec.store.dfs.DrillFileSystem;
+import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.store.dfs.easy.EasyFormatPlugin;
-import org.apache.drill.exec.store.dfs.easy.EasyWriter;
-import org.apache.drill.exec.store.dfs.easy.FileWork;
+import org.apache.drill.exec.store.dfs.easy.EasySubScan;
+import org.apache.drill.shaded.guava.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.List;
 
 public class XMLFormatPlugin extends EasyFormatPlugin<XMLFormatConfig> {
 
-  private static final boolean IS_COMPRESSIBLE = false;
-
-  private static final String DEFAULT_NAME = "xml";
+  public static final String DEFAULT_NAME = "xml";
 
   private XMLFormatConfig config;
 
-  private static final Logger logger = LoggerFactory.getLogger(XMLFormatPlugin.class);
+  private static class XMLReaderFactory extends FileScanFramework.FileReaderFactory {
+    private final XMLBatchReader.XMLReaderConfig readerConfig;
 
-  public XMLFormatPlugin(String name, DrillbitContext context, Configuration fsConf, StoragePluginConfig storageConfig) {
-    this(name, context, fsConf, storageConfig, new XMLFormatConfig());
+    public XMLReaderFactory(XMLBatchReader.XMLReaderConfig config) {
+      readerConfig = config;
+    }
+
+    @Override
+    public ManagedReader<? extends FileScanFramework.FileSchemaNegotiator> newReader() {
+      return new XMLBatchReader(readerConfig);
+    }
   }
 
-  public XMLFormatPlugin(String name,
-                         DrillbitContext context,
-                         Configuration fsConf,
-                         StoragePluginConfig config,
-                         XMLFormatConfig formatPluginConfig) {
-    super(name, context, fsConf, config, formatPluginConfig, true, false, false, IS_COMPRESSIBLE, formatPluginConfig.getExtensions(), DEFAULT_NAME);
-    this.config = formatPluginConfig;
+  public XMLFormatPlugin(String name, DrillbitContext context,
+                         Configuration fsConf, StoragePluginConfig storageConfig,
+                         XMLFormatConfig formatConfig) {
+    super(name, easyConfig(fsConf, formatConfig), context, storageConfig, formatConfig);
   }
 
-  @Override
-  public RecordReader getRecordReader(FragmentContext context,
-                                      DrillFileSystem dfs,
-                                      FileWork fileWork,
-                                      List<SchemaPath> columns,
-                                      String userName) throws ExecutionSetupException {
-    return new XMLRecordReader(context, fileWork.getPath().toString(), dfs, columns, config);
-  }
-
-
-  @Override
-  public int getReaderOperatorType() {
-    // TODO Is it correct??
-    return UserBitShared.CoreOperatorType.JSON_SUB_SCAN_VALUE;
-  }
-
-  @Override
-  public int getWriterOperatorType() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean supportsPushDown() {
-    return true;
+  private static EasyFormatConfig easyConfig(Configuration fsConf, XMLFormatConfig pluginConfig) {
+    EasyFormatConfig config = new EasyFormatConfig();
+    config.readable = true;
+    config.writable = false;
+    config.blockSplittable = true;
+    config.compressible = true;
+    config.supportsProjectPushdown = true;
+    config.extensions = Lists.newArrayList(pluginConfig.getExtensions());
+    config.fsConf = fsConf;
+    config.defaultName = DEFAULT_NAME;
+    config.readerOperatorType = UserBitShared.CoreOperatorType.REGEX_SUB_SCAN_VALUE;  // TODO Fix this Later
+    config.useEnhancedScan = true;
+    return config;
   }
 
   @Override
-  public RecordWriter getRecordWriter(FragmentContext context, EasyWriter writer) throws IOException {
-    return null;
+  public ManagedReader<? extends FileScanFramework.FileSchemaNegotiator> newBatchReader(
+    EasySubScan scan, OptionManager options) throws ExecutionSetupException {
+    return new XMLBatchReader(formatConfig.getReaderConfig(this));
+  }
+
+  @Override
+  protected FileScanBuilder frameworkBuilder(OptionManager options, EasySubScan scan) throws ExecutionSetupException {
+    FileScanBuilder builder = new FileScanBuilder();
+    XMLBatchReader.XMLReaderConfig readerConfig = new XMLBatchReader.XMLReaderConfig(this);
+
+    builder.setReaderFactory(new XMLReaderFactory(readerConfig));
+
+    initScanBuilder(builder, scan);
+    builder.setNullType(Types.optional(TypeProtos.MinorType.VARCHAR));
+    return builder;
   }
 }
