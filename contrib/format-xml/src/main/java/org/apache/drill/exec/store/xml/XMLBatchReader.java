@@ -17,13 +17,18 @@
 
 package org.apache.drill.exec.store.xml;
 
-import com.google.common.collect.Iterators;
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.physical.impl.scan.file.FileScanFramework;
 import org.apache.drill.exec.physical.impl.scan.file.FileScanFramework.FileSchemaNegotiator;
 import org.apache.drill.exec.physical.impl.scan.framework.ManagedReader;
 import org.apache.drill.exec.physical.resultSet.ResultSetLoader;
 import org.apache.drill.exec.physical.resultSet.RowSetLoader;
+import org.apache.drill.exec.record.metadata.ColumnMetadata;
+import org.apache.drill.exec.record.metadata.MetadataUtils;
+import org.apache.drill.exec.record.metadata.SchemaBuilder;
+import org.apache.drill.exec.vector.accessor.ScalarWriter;
+import org.apache.drill.exec.vector.accessor.TupleWriter;
 import org.apache.hadoop.mapred.FileSplit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.Characters;
 import javax.xml.stream.events.StartElement;
@@ -38,6 +44,7 @@ import javax.xml.stream.events.XMLEvent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.Stack;
 
 public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
 
@@ -59,9 +66,19 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
 
   private RowSetLoader rowWriter;
 
+  private Stack<String> nestedFieldnameStack;
+
+  private XMLDataVector nested_data2;
+
   private boolean flattenAttributes;
 
   private boolean flatten;
+
+  private boolean inNested = false;
+
+  private int columnIndex = 0;
+
+  private int dataLevel = 3; // TODO set this in the config
 
 
   static class XMLReaderConfig {
@@ -90,8 +107,7 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     loader = negotiator.build();
     rowWriter = loader.writer();
     openFile(negotiator);
-
-
+    return true;
   }
 
   private void openFile(FileScanFramework.FileSchemaNegotiator negotiator) {
@@ -111,14 +127,18 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
   @Override
   public boolean next() {
     while (!rowWriter.isFull()) {
-      if (!nextLine(rowWriter)) {
+      try {
+        if (!nextLine(rowWriter)) {
+          return false;
+        }
+      } catch (Exception e) {
         return false;
       }
     }
     return true;
   }
 
-  private boolean nextLine(RowSetLoader rowWriter) {
+  private boolean nextLine(RowSetLoader rowWriter) throws Exception {
     if (!XMLReader.hasNext()) {
       return false;
     }
@@ -126,15 +146,19 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     XMLEvent currentEvent;
     int lastElementType = -1;
     int loopCounter = 0;
-    String currentFieldName;
+    String currentFieldName = "";
     String fieldValue = "";
     String fieldPrefix = "";
+    int currentNestingLevel = 0;
+    int dataLevel = 2;  // TODO Set this from the config
+
+    nested_data2 = new XMLDataVector();
 
     /*
-    This loop iterates over XML tags.  Depending on the tag content, the loop will take different actions.
+     * This loop iterates over XML tags.  Depending on the tag content, the loop will take different actions.
      */
     while (XMLReader.hasNext()) {
-      currentEvent = this.XMLReader.nextEvent();
+      currentEvent = XMLReader.nextEvent();
 
       //Skip empty events
       if (currentEvent.toString().trim().isEmpty()) {
@@ -147,55 +171,14 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
 
       switch (currentEvent.getEventType()) {
         case XMLStreamConstants.START_ELEMENT:
+          currentNestingLevel++;
+
+          if (currentNestingLevel == dataLevel) {
+            rowWriter.start();
+          }
           StartElement startElement = currentEvent.asStartElement();
-          String qName = startElement.getName().getLocalPart();
-
-          if (lastElementType == XMLStreamConstants.START_ELEMENT) {
-
-            // TODO Only push to stack above data level
-            this.nested_field_name_stack.push(currentFieldName);
-            System.out.println("Pushing: " + currentFieldName);
-
-            //nested_data_stack.push(map.map(current_field_name));
-
-            nested_data2.setNestedFieldName(currentFieldName);
-          }
           currentFieldName = startElement.getName().getLocalPart();
-
-          int attribute_count = Iterators.size(startElement.getAttributes());
-
-          if (!readerConfig.plugin.getConfig().flattenAttributes && attribute_count > 0) {
-            attrib_map = map.map(currentFieldName + "_attribs");
-            attrib_map.start();
-          }
-
-          Iterator<Attribute> attributes = startElement.getAttributes();
-
-          //TODO Add Support for attributes on nested fields
-          while (attributes.hasNext()) {
-            Attribute a = attributes.next();
-            if (flattenAttributes) {
-              String attrib_field_name = currentFieldName + "_" + a.getName();
-              byte[] bytes = a.getValue().getBytes("UTF-8");
-              this.buffer.setBytes(0, bytes, 0, bytes.length);
-              map.varChar(attrib_field_name).writeVarChar(0, bytes.length, buffer);
-
-            } else {
-              //Create a map of attributes
-              String attrib_name = a.getName().toString();
-              byte[] bytes = a.getValue().getBytes("UTF-8");
-              this.buffer.setBytes(0, bytes, 0, bytes.length);
-              attrib_map.varChar(attrib_name).writeVarChar(0, bytes.length, buffer);
-            }
-
-          }
-
-          if (!flattenAttributes && attribute_count > 0) {
-            attrib_map.end();
-          }
-
-          nesting_level++;
-          fieldPrefix = addField(fieldPrefix, currentFieldName);
+          logger.debug("Current Field Name: " + currentFieldName);
 
           break;
 
@@ -206,13 +189,27 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
         case XMLStreamConstants.CHARACTERS:
           Characters characters = currentEvent.asCharacters();
           fieldValue = characters.getData().trim();
+          logger.debug("Field Value for {}: {}", currentFieldName, fieldValue);
+          break;
+        case XMLStreamConstants.END_ELEMENT:
+          currentNestingLevel--;
+
+          if (currentNestingLevel >= dataLevel) {
+            writeStringColumn(rowWriter, currentFieldName, fieldValue);
+          }
+
+          if (currentNestingLevel < dataLevel && rowWriter != null) {
+            rowWriter.save();
+          }
           break;
       }
 
       loopCounter++;
-    }
+    } // End loop
 
+    return true;
   }
+
 
   @Override
   public void close() {
@@ -220,10 +217,80 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
       try {
         fsStream.close();
       } catch (IOException e) {
-        logger.warn("Error when closing XSSFWorkbook resource: {}", e.getMessage());
+        logger.warn("Error when closing resource: {}", e.getMessage());
       }
       fsStream = null;
     }
+
+    if (XMLReader != null) {
+      try {
+        XMLReader.close();
+      } catch (XMLStreamException e) {
+        logger.warn("Error when closing XML stream", e.getMessage());
+      }
+      XMLReader = null;
+    }
+  }
+
+  /**
+   * Helper function which writes attributes of an XML element.
+   * @param rowWriter The rowWriter
+   * @param currentFieldName The current field name
+   * @param attributes An iterator of Attribute objects
+   */
+  private void writeAttributes(TupleWriter rowWriter, String currentFieldName, Iterator<Attribute> attributes) {
+    String attributeFieldName = currentFieldName + "_" + "attributes";
+
+    int index = rowWriter.tupleSchema().index(attributeFieldName);
+    if (index == -1) {
+      index = rowWriter
+        .addColumn(SchemaBuilder.columnSchema(attributeFieldName, TypeProtos.MinorType.MAP, TypeProtos.DataMode.REQUIRED));
+    }
+    TupleWriter mapWriter = rowWriter.tuple(index);
+
+    while (attributes.hasNext()) {
+      Attribute currentAttribute = attributes.next();
+      String key = currentAttribute.getName().toString();
+      writeStringColumn(mapWriter, key, currentAttribute.getValue());
+    }
+  }
+
+  private void writeStringColumn(TupleWriter rowWriter, String name, String value) {
+    int index = rowWriter.tupleSchema().index(name);
+    if (index == -1) {
+      ColumnMetadata colSchema = MetadataUtils.newScalar(name, TypeProtos.MinorType.VARCHAR, TypeProtos.DataMode.OPTIONAL);
+      index = rowWriter.addColumn(colSchema);
+    }
+    ScalarWriter colWriter = rowWriter.scalar(index);
+    colWriter.setString(value);
+  }
+
+  /**
+   * Generates a nested field name by combining a field prefix to the current field name.
+   * @param prefix The prefix to be added to the field name.
+   * @param field The field name
+   * @return the prefix, followed by an underscore and the fieldname.
+   */
+  private String addField(String prefix, String field) {
+    return prefix + "_" + field;
+  }
+
+  /**
+   * Returns the field name from nested field names
+   * @param fieldName The nested field name
+   * @return The field name
+   */
+  private String removeField(String fieldName) {
+    String[] components = fieldName.split("_");
+    String newField = "";
+    for (int i = 0; i < components.length - 1; i++) {
+      if (i > 0) {
+        newField = newField + "_" + components[i];
+      } else {
+        newField = components[i];
+      }
+    }
+    return newField;
   }
 
 }
