@@ -64,8 +64,10 @@ public class TestXMLReader extends ClusterTest {
 
   @Test
   public void testWildcard() throws Exception {
-    String sql = "SELECT * FROM cp.`xml/books.xml`";
+    String sql = "SELECT * FROM cp.`xml/simple.xml`";
     RowSet results = client.queryBuilder().sql(sql).rowSet();
+
+    results.print();
 
     /*TupleMetadata expectedSchema = new SchemaBuilder()
       .addNullable("year", TypeProtos.MinorType.INT)

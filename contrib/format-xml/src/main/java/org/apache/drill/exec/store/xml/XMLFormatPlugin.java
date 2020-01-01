@@ -52,8 +52,10 @@ public class XMLFormatPlugin extends EasyFormatPlugin<XMLFormatConfig> {
     }
   }
 
-  public XMLFormatPlugin(String name, DrillbitContext context,
-                         Configuration fsConf, StoragePluginConfig storageConfig,
+  public XMLFormatPlugin(String name,
+                         DrillbitContext context,
+                         Configuration fsConf,
+                         StoragePluginConfig storageConfig,
                          XMLFormatConfig formatConfig) {
     super(name, easyConfig(fsConf, formatConfig), context, storageConfig, formatConfig);
   }

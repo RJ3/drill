@@ -36,6 +36,8 @@ public class XMLFormatConfig implements FormatPluginConfig {
 
   public boolean flattenAttributes = true;
 
+  public int dataLevel;
+
   public XMLBatchReader.XMLReaderConfig getReaderConfig(XMLFormatPlugin plugin) {
     XMLBatchReader.XMLReaderConfig readerConfig = new XMLBatchReader.XMLReaderConfig(plugin);
     return readerConfig;
@@ -45,6 +47,7 @@ public class XMLFormatConfig implements FormatPluginConfig {
   public List<String> getExtensions() {
     return extensions;
   }
+
 
   @Override
   public int hashCode() {
