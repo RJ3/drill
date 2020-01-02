@@ -55,6 +55,8 @@ public class TestXMLReader extends ClusterTest {
     ClusterTest.startCluster(ClusterFixture.builder(dirTestWatcher));
 
     XMLFormatConfig formatConfig = new XMLFormatConfig();
+    formatConfig.flatten = false;
+    formatConfig.flattenAttributes =  false;
     cluster.defineFormat("cp", "xml", formatConfig);
 
     // Needed for compressed file unit test
@@ -64,19 +66,18 @@ public class TestXMLReader extends ClusterTest {
 
   @Test
   public void testWildcard() throws Exception {
-    String sql = "SELECT * FROM cp.`xml/simple.xml`";
+    String sql = "SELECT * FROM cp.`xml/books2a.xml`";
     RowSet results = client.queryBuilder().sql(sql).rowSet();
 
     results.print();
 
+    assertNotNull(results);
     /*TupleMetadata expectedSchema = new SchemaBuilder()
-      .addNullable("year", TypeProtos.MinorType.INT)
-      .addNullable("month", TypeProtos.MinorType.INT)
+      .addNullable("author", TypeProtos.MinorType.VARCHAR)
+      .addNullable("title", TypeProtos.MinorType.VARCHAR)
       .addNullable("day", TypeProtos.MinorType.INT)
       .buildSchema();
-
     RowSet expected = client.rowSetBuilder(expectedSchema).addRow(2017, 12, 17).addRow(2017, 12, 18).addRow(2017, 12, 19).build();
-
     RowSetUtilities.verify(expected, results);*/
   }
 
@@ -97,5 +98,4 @@ public class TestXMLReader extends ClusterTest {
       IOUtils.copyBytes(inputStream, outputStream, fs.getConf(), false);
     }
   }
-
 }

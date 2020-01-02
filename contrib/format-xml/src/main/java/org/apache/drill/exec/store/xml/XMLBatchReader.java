@@ -17,6 +17,7 @@
 
 package org.apache.drill.exec.store.xml;
 
+import com.google.common.collect.Iterators;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.physical.impl.scan.file.FileScanFramework;
@@ -138,11 +139,16 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     return true;
   }
 
+  /**
+   *
+   * @param rowWriter The rowWriter for the main
+   * @return True if there is more data, false if not.
+   * @throws Exception
+   */
   private boolean nextLine(RowSetLoader rowWriter) throws Exception {
     if (!XMLReader.hasNext()) {
       return false;
     }
-
     XMLEvent currentEvent;
     int lastElementType = -1;
     int loopCounter = 0;
@@ -151,6 +157,7 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     String fieldPrefix = "";
     int currentNestingLevel = 0;
     int dataLevel = 2;  // TODO Set this from the config
+    boolean rowStarted = false;
 
     nested_data2 = new XMLDataVector();
 
@@ -160,7 +167,7 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     while (XMLReader.hasNext()) {
       currentEvent = XMLReader.nextEvent();
 
-      //Skip empty events
+      // Skip empty events
       if (currentEvent.toString().trim().isEmpty()) {
         continue;
       }
@@ -171,45 +178,62 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
 
       switch (currentEvent.getEventType()) {
         case XMLStreamConstants.START_ELEMENT:
+          StartElement startElement = currentEvent.asStartElement();
           currentNestingLevel++;
 
-          if (currentNestingLevel == dataLevel) {
+          // Start the row
+          if (currentNestingLevel > dataLevel && !rowStarted) {
             rowWriter.start();
+            rowStarted = true;
+            logger.debug("Starting new row");
           }
-          StartElement startElement = currentEvent.asStartElement();
-          currentFieldName = startElement.getName().getLocalPart();
-          logger.debug("Current Field Name: " + currentFieldName);
 
+          // Get the field name
+          currentFieldName = startElement.getName().getLocalPart();
+
+          // Write attributes
+          int attributeCount = Iterators.size(startElement.getAttributes());
+          Iterator<Attribute> attributes = startElement.getAttributes();
+
+          //TODO Add Support for attributes on nested fields
+          while (attributes.hasNext()) {
+            Attribute attrib = attributes.next();
+            if (flattenAttributes) {
+              String attributeFieldName = currentFieldName + "_" + attrib.getName();
+              writeStringColumn(rowWriter, attributeFieldName, attrib.getValue());
+            } else {
+              // Create a map of attributes
+              writeAttributes(rowWriter, currentFieldName, attributes);
+            }
+          }
           break;
 
-        /*
-         *  This is the case in which the reader encounters data between tags.  In this case, the data is read as the
-         *  field value and trailing (and leading) white space is removed.
-         */
         case XMLStreamConstants.CHARACTERS:
+          // Get the field value
           Characters characters = currentEvent.asCharacters();
           fieldValue = characters.getData().trim();
-          logger.debug("Field Value for {}: {}", currentFieldName, fieldValue);
           break;
+
         case XMLStreamConstants.END_ELEMENT:
           currentNestingLevel--;
 
-          if (currentNestingLevel >= dataLevel) {
+          // Case to close a row
+          if (currentNestingLevel < dataLevel && rowStarted) {
+            rowWriter.save();
+            rowStarted = false;
+            logger.debug("Ending row");
+          } else {
+            // Case to write the element
             writeStringColumn(rowWriter, currentFieldName, fieldValue);
           }
-
-          if (currentNestingLevel < dataLevel && rowWriter != null) {
-            rowWriter.save();
-          }
           break;
-      }
+      } // End Switch Statement
 
+      lastElementType = currentEvent.getEventType();
       loopCounter++;
     } // End loop
-
     return true;
   }
-
 
   @Override
   public void close() {
@@ -292,5 +316,4 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     }
     return newField;
   }
-
 }
