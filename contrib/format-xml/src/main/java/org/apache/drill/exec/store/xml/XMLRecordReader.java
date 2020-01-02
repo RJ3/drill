@@ -17,7 +17,7 @@
 
 package org.apache.drill.exec.store.xml;
 
-import com.google.common.collect.Iterators;
+import org.apache.drill.shaded.guava.com.google.common.collect.Iterators;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.exceptions.UserException;

@@ -37,8 +37,6 @@ public class XMLFormatPlugin extends EasyFormatPlugin<XMLFormatConfig> {
 
   public static final String DEFAULT_NAME = "xml";
 
-  private XMLFormatConfig config;
-
   public static class XMLReaderFactory extends FileScanFramework.FileReaderFactory {
     private final XMLBatchReader.XMLReaderConfig readerConfig;
 

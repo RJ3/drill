@@ -3,16 +3,22 @@
     "dfs": {
       "type": "file",
       "formats": {
-        "xml": {
-          "type": "xml"
+        "excel": {
+          "type": "xml",
+          "extensions": [
+            "xml"
+          ]
         }
       }
     },
     "s3": {
       "type": "file",
       "formats": {
-        "xml": {
-          "type": "xml"
+        "excel": {
+          "type": "xml",
+          "extensions": [
+            "xml"
+          ]
         }
       }
     }

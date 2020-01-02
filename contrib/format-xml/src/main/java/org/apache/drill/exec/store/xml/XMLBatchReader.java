@@ -17,7 +17,7 @@
 
 package org.apache.drill.exec.store.xml;
 
-import com.google.common.collect.Iterators;
+import org.apache.drill.shaded.guava.com.google.common.collect.Iterators;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.physical.impl.scan.file.FileScanFramework;

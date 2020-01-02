@@ -19,15 +19,11 @@ package org.apache.drill.exec.store.xml;
 
 
 import org.apache.drill.categories.RowSetTests;
-import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.ExecTest;
 import org.apache.drill.exec.physical.rowSet.RowSet;
-import org.apache.drill.exec.record.metadata.SchemaBuilder;
-import org.apache.drill.exec.record.metadata.TupleMetadata;
 import org.apache.drill.exec.store.dfs.ZipCodec;
 import org.apache.drill.test.ClusterFixture;
 import org.apache.drill.test.ClusterTest;
-import org.apache.drill.test.rowSet.RowSetUtilities;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
