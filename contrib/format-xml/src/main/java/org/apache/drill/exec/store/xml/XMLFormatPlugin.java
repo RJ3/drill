@@ -39,7 +39,7 @@ public class XMLFormatPlugin extends EasyFormatPlugin<XMLFormatConfig> {
 
   private XMLFormatConfig config;
 
-  private static class XMLReaderFactory extends FileScanFramework.FileReaderFactory {
+  public static class XMLReaderFactory extends FileScanFramework.FileReaderFactory {
     private final XMLBatchReader.XMLReaderConfig readerConfig;
 
     public XMLReaderFactory(XMLBatchReader.XMLReaderConfig config) {
@@ -82,12 +82,9 @@ public class XMLFormatPlugin extends EasyFormatPlugin<XMLFormatConfig> {
   }
 
   @Override
-  protected FileScanBuilder frameworkBuilder(OptionManager options, EasySubScan scan) throws ExecutionSetupException {
+  protected FileScanFramework.FileScanBuilder frameworkBuilder(OptionManager options, EasySubScan scan) {
     FileScanBuilder builder = new FileScanBuilder();
-    XMLBatchReader.XMLReaderConfig readerConfig = new XMLBatchReader.XMLReaderConfig(this);
-
-    builder.setReaderFactory(new XMLReaderFactory(readerConfig));
-
+    builder.setReaderFactory(new XMLReaderFactory(new XMLBatchReader.XMLReaderConfig(this)));
     initScanBuilder(builder, scan);
     builder.setNullType(Types.optional(TypeProtos.MinorType.VARCHAR));
     return builder;

@@ -51,7 +51,7 @@ public class XMLFormatConfig implements FormatPluginConfig {
   @Override
   public int hashCode() {
     return Arrays.hashCode(
-      new Object[]{extensions, flatten, flattenAttributes});
+      new Object[]{extensions, flatten, flattenAttributes, dataLevel});
   }
 
   @Override
