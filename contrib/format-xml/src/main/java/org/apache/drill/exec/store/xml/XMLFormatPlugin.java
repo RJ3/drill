@@ -17,7 +17,6 @@
 
 package org.apache.drill.exec.store.xml;
 
-import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.logical.StoragePluginConfig;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
@@ -75,7 +74,7 @@ public class XMLFormatPlugin extends EasyFormatPlugin<XMLFormatConfig> {
 
   @Override
   public ManagedReader<? extends FileScanFramework.FileSchemaNegotiator> newBatchReader(
-    EasySubScan scan, OptionManager options) throws ExecutionSetupException {
+    EasySubScan scan, OptionManager options) {
     return new XMLBatchReader(formatConfig.getReaderConfig(this));
   }
 

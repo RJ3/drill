@@ -39,8 +39,7 @@ public class XMLFormatConfig implements FormatPluginConfig {
   public int dataLevel;
 
   public XMLBatchReader.XMLReaderConfig getReaderConfig(XMLFormatPlugin plugin) {
-    XMLBatchReader.XMLReaderConfig readerConfig = new XMLBatchReader.XMLReaderConfig(plugin);
-    return readerConfig;
+    return new XMLBatchReader.XMLReaderConfig(plugin);
   }
 
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)

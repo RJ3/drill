@@ -62,7 +62,7 @@ public class TestXMLReader extends ClusterTest {
 
   @Test
   public void testWildcard() throws Exception {
-    String sql = "SELECT * FROM cp.`xml/books2a.xml`";
+    String sql = "SELECT * FROM cp.`xml/books3a.xml`";
     RowSet results = client.queryBuilder().sql(sql).rowSet();
 
     results.print();

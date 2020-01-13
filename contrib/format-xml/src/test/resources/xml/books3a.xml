@@ -11,10 +11,13 @@
         </publisher>
     </book>
     <book>
-        <author>Niklaus Wirth</author>
-        <title>The Programming Language Pascal</title>
-        <category>PASCAL</category>
-        <year>1971</year>
+        <authors>
+            <author>Charles Givre</author>
+            <author>Paul Rogers</author>
+        </authors>
+        <title>Learning Apache Drill</title>
+        <category>BIG DATA</category>
+        <year>2018</year>
     </book>
     <book>
         <author>O.-J. Dahl</author>
