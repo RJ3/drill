@@ -17,6 +17,9 @@
 
 package org.apache.drill.exec.store.xml;
 
+import org.apache.drill.exec.record.metadata.MapBuilder;
+import org.apache.drill.exec.record.metadata.TupleMetadata;
+import org.apache.drill.exec.vector.accessor.ArrayWriter;
 import org.apache.drill.shaded.guava.com.google.common.collect.Iterators;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.types.TypeProtos;
@@ -68,6 +71,8 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
   private RowSetLoader rowWriter;
 
   private Stack<String> nestedFieldNameStack;
+
+  private Stack<TupleWriter> rowWriterStack;
 
   private XMLDataVector nested_data2;
 
@@ -184,11 +189,24 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
           if (lastElementType == XMLStreamConstants.START_ELEMENT) {
             //TODO Only push to stack above data level
             nestedFieldNameStack.push(currentFieldName);
-            System.out.println("Pushing: " + currentFieldName);
+            logger.debug("Pushing: " + currentFieldName);
 
-            //nested_data_stack.push(map.map(current_field_name));
+            // Add currentRowWriter to Stack
+            rowWriterStack.push(rowWriter);
 
-            nested_data2.setNestedFieldName(currentFieldName);
+            // Create new schema for new map
+            SchemaBuilder innerSchema = new SchemaBuilder();
+            logger.debug("Adding map for {}.", startElement.getName().getLocalPart());
+
+            MapBuilder mapBuilder = innerSchema.addMap(startElement.getName().getLocalPart());
+            TupleMetadata finalInnerSchema = mapBuilder.resumeSchema().buildSchema();
+
+            int index = rowWriter.tupleSchema().index(startElement.getName().getLocalPart());
+            if (index == -1) {
+              index = rowWriter.addColumn(finalInnerSchema.column(startElement.getName().getLocalPart()));
+            }
+
+            TupleWriter listWriter = rowWriter.column(index).tuple();
           }
 
           // Start the row
@@ -332,82 +350,4 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     }
     return newField;
   }
-
-  /**
-   * Helper function to write a 1D int column
-   *
-   * @param rowWriter The row to which the data will be written
-   * @param name The column name
-   * @param value The value to be written
-   */
-  private void writeIntColumn(TupleWriter rowWriter, String name, int value) {
-    ScalarWriter colWriter = getColWriter(rowWriter, name, TypeProtos.MinorType.INT);
-    colWriter.setInt(value);
-  }
-
-  /**
-   * Helper function to write a 2D int list
-   * @param rowWriter the row to which the data will be written
-   * @param name the name of the outer list
-   * @param list the list of data
-   */
-  private void writeIntListColumn(TupleWriter rowWriter, String name, int[] list) {
-    int index = rowWriter.tupleSchema().index(name);
-    if (index == -1) {
-      ColumnMetadata colSchema = MetadataUtils.newScalar(name, TypeProtos.MinorType.INT, TypeProtos.DataMode.REPEATED);
-      index = rowWriter.addColumn(colSchema);
-    }
-
-    ScalarWriter arrayWriter = rowWriter.column(index).array().scalar();
-    for (int value : list) {
-      arrayWriter.setInt(value);
-    }
-  }
-
-  private void mapIntMatrixField(int[][] colData, int cols, int rows, RowSetLoader rowWriter) {
-    // If the default path is not null, auto flatten the data
-    // The end result are that a 2D array gets mapped to Drill columns
-    if (readerConfig.defaultPath != null) {
-      for (int i = 0; i < rows; i++) {
-        rowWriter.start();
-        for (int k = 0; k < cols; k++) {
-          String tempColumnName = INT_COLUMN_PREFIX + k;
-          writeIntColumn(rowWriter, tempColumnName, colData[i][k]);
-        }
-        rowWriter.save();
-      }
-    } else {
-      intMatrixHelper(colData, cols, rows, rowWriter);
-    }
-  }
-
-  private void intMatrixHelper(int[][] colData, int cols, int rows, RowSetLoader rowWriter) {
-    // This is the case where a dataset is projected in a metadata query.  The result should be a list of lists
-
-    TupleMetadata nestedSchema = new SchemaBuilder()
-      .addRepeatedList(INT_COLUMN_NAME)
-      .addArray(TypeProtos.MinorType.INT)
-      .resumeSchema()
-      .buildSchema();
-
-    int index = rowWriter.tupleSchema().index(INT_COLUMN_NAME);
-    if (index == -1) {
-      index = rowWriter.addColumn(nestedSchema.column(INT_COLUMN_NAME));
-    }
-
-    // The outer array
-    ArrayWriter listWriter = rowWriter.column(index).array();
-    // The inner array
-    ArrayWriter innerWriter = listWriter.array();
-    // The strings within the inner array
-    ScalarWriter intWriter = innerWriter.scalar();
-
-    for (int i = 0; i < rows; i++) {
-      for (int k = 0; k < cols; k++) {
-        intWriter.setInt(colData[i][k]);
-      }
-      listWriter.save();
-    }
-  }
-
 }
