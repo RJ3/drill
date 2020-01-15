@@ -105,6 +105,7 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     this.flatten = readerConfig.flatten;
     nestingLevel = 0;
     nestedFieldNameStack = new Stack<>();
+    rowWriterStack = new Stack<>();
   }
 
 
@@ -159,6 +160,7 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
     int lastElementType = -1;
     int loopCounter = 0;
     String currentFieldName = "";
+    String lastFieldName;
     String fieldValue = "";
     String fieldPrefix = "";
     int currentNestingLevel = 0;
@@ -186,27 +188,34 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
         case XMLStreamConstants.START_ELEMENT:
           StartElement startElement = currentEvent.asStartElement();
           currentNestingLevel++;
-          if (lastElementType == XMLStreamConstants.START_ELEMENT) {
-            //TODO Only push to stack above data level
-            nestedFieldNameStack.push(currentFieldName);
-            logger.debug("Pushing: " + currentFieldName);
+
+          // Get the field name
+          lastFieldName = currentFieldName;
+          currentFieldName = startElement.getName().getLocalPart();
+
+          if (lastElementType == XMLStreamConstants.START_ELEMENT && currentNestingLevel > dataLevel + 2) {
+
+            /*nestedFieldNameStack.push(lastFieldName);
+            logger.debug("Pushing: " + lastFieldName);
 
             // Add currentRowWriter to Stack
             rowWriterStack.push(rowWriter);
 
             // Create new schema for new map
             SchemaBuilder innerSchema = new SchemaBuilder();
-            logger.debug("Adding map for {}.", startElement.getName().getLocalPart());
 
-            MapBuilder mapBuilder = innerSchema.addMap(startElement.getName().getLocalPart());
+            // TODO The name needs to be the last name, not the current name...
+            logger.debug("Adding map for {}.", lastFieldName);
+
+            MapBuilder mapBuilder = innerSchema.addMap(lastFieldName);
             TupleMetadata finalInnerSchema = mapBuilder.resumeSchema().buildSchema();
 
-            int index = rowWriter.tupleSchema().index(startElement.getName().getLocalPart());
+            int index = rowWriter.tupleSchema().index(currentFieldName);
             if (index == -1) {
-              index = rowWriter.addColumn(finalInnerSchema.column(startElement.getName().getLocalPart()));
+              index = rowWriter.addColumn(finalInnerSchema.column(currentFieldName));
             }
 
-            TupleWriter listWriter = rowWriter.column(index).tuple();
+            TupleWriter listWriter = rowWriter.column(index).tuple();*/
           }
 
           // Start the row
@@ -215,9 +224,6 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
             rowStarted = true;
             logger.debug("Starting new row");
           }
-
-          // Get the field name
-          currentFieldName = startElement.getName().getLocalPart();
 
           // Write attributes
           int attributeCount = Iterators.size(startElement.getAttributes());

@@ -51,7 +51,7 @@ public class TestXMLReader extends ClusterTest {
     ClusterTest.startCluster(ClusterFixture.builder(dirTestWatcher));
 
     XMLFormatConfig formatConfig = new XMLFormatConfig();
-    formatConfig.flatten = false;
+    formatConfig.flatten = true;
     formatConfig.flattenAttributes =  false;
     cluster.defineFormat("cp", "xml", formatConfig);
 
