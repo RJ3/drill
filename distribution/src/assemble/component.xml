@@ -39,6 +39,7 @@
         <include>org.apache.drill.contrib.storage-hive:drill-hive-exec-shaded:jar</include>
         <include>org.apache.drill.contrib.data:tpch-sample-data:jar</include>
         <include>org.apache.drill.contrib:drill-mongo-storage:jar</include>
+        <include>org.apache.drill.contrib:drill-cassandra-storage</include>
         <include>org.apache.drill.contrib:drill-storage-hbase:jar</include>
         <include>org.apache.drill.contrib:drill-format-mapr:jar</include>
         <include>org.apache.drill.contrib:drill-format-syslog:jar</include>
@@ -48,7 +49,6 @@
         <include>org.apache.drill.contrib:drill-format-excel:jar</include>
         <include>org.apache.drill.contrib:drill-jdbc-storage:jar</include>
         <include>org.apache.drill.contrib:drill-kudu-storage:jar</include>
-        <include>org.apache.drill.contrib:drill-cassandra-storage:jar</include>
         <include>org.apache.drill.contrib:drill-storage-kafka:jar</include>
         <include>org.apache.drill.contrib:drill-opentsdb-storage:jar</include>
         <include>org.apache.drill.contrib:drill-udfs:jar</include>

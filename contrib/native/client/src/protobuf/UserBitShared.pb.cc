@@ -1323,6 +1323,7 @@ bool CoreOperatorType_IsValid(int value) {
     case 65:
     case 66:
     case 67:
+    case 72:
       return true;
     default:
       return false;
