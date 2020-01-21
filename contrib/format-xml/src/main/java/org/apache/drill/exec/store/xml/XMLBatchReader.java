@@ -346,14 +346,14 @@ public class XMLBatchReader implements ManagedReader<FileSchemaNegotiator> {
    */
   private String removeField(String fieldName) {
     String[] components = fieldName.split("_");
-    String newField = "";
+    StringBuilder newField = new StringBuilder();
     for (int i = 0; i < components.length - 1; i++) {
       if (i > 0) {
-        newField = newField + "_" + components[i];
+        newField.append("_").append(components[i]);
       } else {
-        newField = components[i];
+        newField = new StringBuilder(components[i]);
       }
     }
-    return newField;
+    return newField.toString();
   }
 }
