@@ -17,9 +17,6 @@
 
 package org.apache.drill.exec.store.xml;
 
-import org.apache.drill.exec.record.metadata.MapBuilder;
-import org.apache.drill.exec.record.metadata.TupleMetadata;
-import org.apache.drill.exec.vector.accessor.ArrayWriter;
 import org.apache.drill.shaded.guava.com.google.common.collect.Iterators;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.types.TypeProtos;

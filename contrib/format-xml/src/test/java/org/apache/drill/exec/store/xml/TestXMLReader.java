@@ -17,7 +17,6 @@
 
 package org.apache.drill.exec.store.xml;
 
-
 import org.apache.drill.categories.RowSetTests;
 import org.apache.drill.exec.ExecTest;
 import org.apache.drill.exec.physical.rowSet.RowSet;
