@@ -524,21 +524,6 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>nl.basjes.parse.httpdlog</groupId>
-      <artifactId>httpdlog-parser</artifactId>
-      <version>5.2</version>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-codec</groupId>
-          <artifactId>commons-codec</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.glassfish</groupId>
       <artifactId>javax.json</artifactId>
       <version>1.0.4</version>
