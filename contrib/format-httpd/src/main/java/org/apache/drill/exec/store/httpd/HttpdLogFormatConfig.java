@@ -17,64 +17,83 @@
  */
 package org.apache.drill.exec.store.httpd;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.drill.common.PlanStringBuilder;
 import org.apache.drill.common.logical.FormatPluginConfig;
+import org.apache.parquet.Strings;
 
-@JsonTypeName("httpd")
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+@JsonTypeName(HttpdLogFormatPlugin.DEFAULT_NAME)
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class HttpdLogFormatConfig implements FormatPluginConfig {
 
-  public String logFormat;
-  public String timestampFormat = "dd/MMM/yyyy:HH:mm:ss ZZ";
+  public static final String DEFAULT_TIME_FORMAT = "dd/MMM/yyyy:HH:mm:ss ZZ";
 
-  /**
-   * @return the log formatting string.  This string is the config string from httpd.conf or similar config file.
-   */
+  public final String logFormat;
+
+  public final String timestampFormat;
+
+  public final List<String> extensions;
+
+  @JsonCreator
+  public HttpdLogFormatConfig(@JsonProperty("logFormat") String logFormat,
+                              @JsonProperty("timestampFormat") String timestampFormat,
+                              @JsonProperty("extensions") List<String> extensions ) {
+    this.logFormat = logFormat;
+    this.timestampFormat = Strings.isNullOrEmpty(timestampFormat) ? timestampFormat : DEFAULT_TIME_FORMAT;
+    if (extensions == null) {
+      this.extensions = Collections.singletonList("httpd");
+    } else {
+      this.extensions = extensions;
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public String getLogFormat() {
     return logFormat;
   }
 
-  public void setLogFormat(String format) {
-    this.logFormat = format;
-  }
-
-  /**
-   * @return the timestampFormat
-   */
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public String getTimestampFormat() {
     return timestampFormat;
   }
 
-  /**
-   * Sets the time stamp format
-   * @param timestamp
-   */
-  public void setTimestampFormat(String timestamp) {
-    this.timestampFormat = timestamp;
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public List<String> getExtensions() {
+    return extensions;
   }
 
   @Override
   public int hashCode() {
-    int result = logFormat != null ? logFormat.hashCode() : 0;
-    result = 31 * result + (timestampFormat != null ? timestampFormat.hashCode() : 0);
-    return result;
+    return Arrays.hashCode(
+      new Object[]{logFormat, timestampFormat});
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
+  public boolean equals(Object obj) {
+    if (this == obj) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
+    HttpdLogFormatConfig other = (HttpdLogFormatConfig) obj;
+    return Objects.equals(logFormat, other.logFormat)
+      && Objects.equals(timestampFormat, other.timestampFormat);
+  }
 
-    HttpdLogFormatConfig that = (HttpdLogFormatConfig) o;
-
-    if (logFormat != null ? !logFormat.equals(that.logFormat) : that.logFormat != null) {
-      return false;
-    }
-    return timestampFormat != null ? timestampFormat.equals(that.timestampFormat) : that.timestampFormat == null;
+  @Override
+  public String toString() {
+    return new PlanStringBuilder(this)
+      .field("logFormat", logFormat)
+      .field("timestampFormat", timestampFormat)
+      .toString();
   }
 }
