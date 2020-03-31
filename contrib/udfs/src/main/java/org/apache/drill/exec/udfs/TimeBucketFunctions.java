@@ -140,7 +140,7 @@ public class TimeBucketFunctions {
       long groupByInterval = interval.value;
 
       java.time.Instant instant = java.time.Instant.ofEpochMilli(timestamp - (timestamp % groupByInterval));
-      java.time.LocalDateTime localDate = instant.atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+      java.time.LocalDateTime localDate = instant.atZone(java.time.ZoneId.of("UTC")).toLocalDateTime();
 
       out.value = localDate.atZone(java.time.ZoneId.of("UTC")).toInstant().toEpochMilli();
     }
